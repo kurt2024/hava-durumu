@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dünya Hava Durumu</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            color: #fff;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 380px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 28px;
+            padding: 25px 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        }
+        .search-bar { display: flex; gap: 8px; margin-bottom: 25px; }
+        input {
+            flex: 1; padding: 12px 16px; border-radius: 14px; border: none; outline: none;
+            font-size: 15px; background: rgba(255, 255, 255, 0.9); color: #222;
+        }
+        button {
+            padding: 12px 14px; border: none; border-radius: 14px; font-weight: bold;
+            cursor: pointer; transition: 0.2s;
+        }
+        .btn-search { background: #00b4d8; color: white; }
+        .btn-location { background: #e63946; color: white; font-size: 18px; }
+        button:active { transform: scale(0.92); }
+        .weather-box { text-align: center; }
+        .city-title { font-size: 24px; font-weight: 700; }
+        .country-sub { font-size: 14px; color: #caf0f8; margin-top: 2px; }
+        .temp-display { font-size: 68px; font-weight: 800; margin: 15px 0; }
+        .status-text { font-size: 18px; margin-bottom: 25px; color: #f1faee; font-weight: 500; }
+        .metrics-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+            background: rgba(0, 0, 0, 0.2); padding: 15px; border-radius: 18px;
+        }
+        .metric-card {
+            background: rgba(255, 255, 255, 0.08); padding: 12px; border-radius: 14px;
+            font-size: 13px; color: #90e0ef; text-align: center;
+        }
+        .metric-card span { display: block; font-size: 18px; font-weight: 700; color: #fff; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="search-bar">
+        <input type="text" id="cityInput" placeholder="Tüm Dünya (Örn: Tokyo, Paris)">
+        <button class="btn-search" onclick="searchCity()">Ara</button>
+        <button class="btn-location" onclick="getLocation()" title="Konumumu Bul">📍</button>
+    </div>
+
+    <div class="weather-box">
+        <div class="city-title" id="cityName">Yükleniyor...</div>
+        <div class="country-sub" id="countryName">Dünya Veritabanı</div>
+        <div class="temp-display" id="temperature">--°</div>
+        <div class="status-text" id="condition">Veri alınıyor...</div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">Hissedilen<span id="feelsLike">--°</span></div>
+            <div class="metric-card">Nem<span id="humidity">--%</span></div>
+            <div class="metric-card">Rüzgar<span id="wind">-- km/s</span></div>
+            <div class="metric-card">En Yüksek<span id="maxTemp">--°</span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const weatherCodes = {
+        0: 'Açık / Güneşli ☀️', 1: 'Çoğunlukla Açık 🌤️', 2: 'Parçalı Bulutlu ⛅',
+        3: 'Kapalı / Bulutlu ☁️', 45: 'Sisli 🌫️', 48: 'Kırağılı Sis 🌫️',
+        51: 'Hafif Yağmur 🌦️', 61: 'Yağmurlu 🌧️', 65: 'Şiddetli Yağmur ⛈️',
+        71: 'Hafif Kar 🌨️', 75: 'Yoğun Kar ❄️', 95: 'Gök Gürültülü Fırtına ⚡'
+    };
+
+    async function fetchWeather(lat, lon, cityName, countryName) {
+        document.getElementById('condition').innerText = "Hava güncelleniyor...";
+        try {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max&timezone=auto`;
+            const res = await fetch(url);
+            const data = await res.json();
+            const cur = data.current;
+
+            document.getElementById('cityName').innerText = cityName;
+            document.getElementById('countryName').innerText = countryName || '';
+            document.getElementById('temperature').innerText = `${Math.round(cur.temperature_2m)}°`;
+            document.getElementById('feelsLike').innerText = `${Math.round(cur.apparent_temperature)}°`;
+            document.getElementById('humidity').innerText = `%${cur.relative_humidity_2m}`;
+            document.getElementById('wind').innerText = `${cur.wind_speed_10m} km/s`;
+            document.getElementById('maxTemp').innerText = `${Math.round(data.daily.temperature_2m_max[0])}°`;
+            document.getElementById('condition').innerText = weatherCodes[cur.weather_code] || 'Açık';
+        } catch (e) {
+            alert("Hava durumu bilgisi alınamadı!");
+        }
+    }
+
+    async function searchCity() {
+        const query = document.getElementById('cityInput').value.trim();
+        if(!query) return;
+
+        document.getElementById('condition').innerText = "Aranıyor...";
+        try {
+            const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=tr&format=json`);
+            const data = await res.json();
+            if (!data.results || data.results.length === 0) {
+                alert("Şehir bulunamadı!");
+                return;
+            }
+            const { latitude, longitude, name, country } = data.results[0];
+            fetchWeather(latitude, longitude, name, country);
+        } catch {
+            alert("Hata oluştu!");
+        }
+    }
+
+    function getLocation() {
+        if (!navigator.geolocation) {
+            alert("Tarayıcınız konum özelliğini desteklemiyor.");
+            return;
+        }
+        document.getElementById('condition').innerText = "GPS aranıyor...";
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            try {
+                const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=tr`);
+                const geoData = await geoRes.json();
+                const city = geoData.locality || geoData.city || geoData.principalSubdivision || "Konumunuz";
+                fetchWeather(lat, lon, city, geoData.countryName || "");
+            } catch {
+                fetchWeather(lat, lon, "Mevcut Konum", "");
+            }
+        }, () => {
+            alert("Konum izni verilmedi.");
+        });
+    }
+
+    window.onload = () => {
+        document.getElementById('cityInput').value = "İstanbul";
+        searchCity();
+    };
+</script>
+</body>
+</html>
