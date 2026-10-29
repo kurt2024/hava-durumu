@@ -26,7 +26,9 @@ jobs:
         java-version: '17'
 
     - name: Install Dependencies
-      run: npm install
+      run: |
+        npm install --package-lock-only || true
+        npm install
 
     - name: Initialize Capacitor and Add Android Platform
       run: |
